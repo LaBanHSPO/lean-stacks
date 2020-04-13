@@ -1,0 +1,55 @@
+version: "3.7"
+
+services:
+
+  proxy:
+    image: "traefik:v2.0"
+    command:
+      - "--api.insecure=true"
+      - "--log.level=DEBUG"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=public_proxy"
+      - "--providers.docker.swarmMode=true"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"
+      - "--certificatesresolvers.httpChallenge.acme.httpchallenge=true"
+      - "--certificatesresolvers.httpChallenge.acme.tlschallenge=true"
+      - "--certificatesresolvers.httpChallenge.acme.httpchallenge.entrypoint=http"
+      - "--certificatesresolvers.httpChallenge.acme.email=zeddy502@gmail.com"
+      - "--certificatesresolvers.httpChallenge.acme.storage=/letsencrypt/acme.json"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        # Routers
+        - "traefik.http.routers.traefik_monitor_http_router.entrypoints=http"
+        - "traefik.http.routers.traefik_monitor_http_router.middlewares=httpsRedirectScheme"
+        - "traefik.http.routers.traefik_monitor_http_router.rule=Host(`traefik.tn20.wedesign.vn`)"
+        - "traefik.http.routers.traefik_monitor_http_router.service=traefik_monitor_service"
+        # Services
+        - "traefik.http.routers.traefik_monitor_https_router.entrypoints=https"
+        - "traefik.http.routers.traefik_monitor_https_router.rule=Host(`traefik.tn20.wedesign.vn`)"
+        - "traefik.http.routers.traefik_monitor_https_router.service=traefik_monitor_service"
+        - "traefik.http.routers.traefik_monitor_https_router.tls.certresolver=httpChallenge"
+        # Services
+        - "traefik.http.services.traefik_monitor_service.loadbalancer.server.port=8080"
+        # Middlewares (these middlewares are being reused by other services)
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.permanent=true"
+      placement:
+        constraints:
+          - node.role == manager
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "data:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+networks:
+  default:
+    external:
+      name: public_proxy
+
+volumes:
+  data:

@@ -1,0 +1,8 @@
+version: "3.7"
+
+services:
+  sample:
+    image: codemantn/web_portal:latest
+    deploy:
+      restart_policy:
+        condition: always

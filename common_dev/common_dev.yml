@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  redis:
+    image: redis:5
+    command: ["sh", "-c", "exec redis-server --appendonly no --requirepass \"$REDIS_PASSWORD\""]
+    volumes:
+      - redis_data:/data
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - 9009:6379
+    networks:
+      - public_proxy
+  mongo:
+    image: mongo:4.2
+    ports:
+      - 9007:27017
+    volumes:
+      - mongo_data:/data/db
+    #entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--auth" ]
+    networks:
+      - public_proxy
+  rabbitmq:
+    image: rabbitmq:3
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+      RABBITMQ_DEFAULT_USER: ${RABITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABITMQ_PASS}
+      RABBITMQ_DEFAULT_VHOST: "/"
+    configs:
+      - source: rabbit_enabled_plugins
+        target: /etc/rabbitmq/enabled_plugins
+    ports:
+      - 9006:15672
+      - 9008:5672
+    networks:
+      - public_proxy
+volumes:
+  mongo_data:
+  redis_data:
+networks:
+  public_proxy:
+    external: true
+configs:
+  rabbit_enabled_plugins:
+    external: true

@@ -1,0 +1,142 @@
+version: "3.7"
+
+services:
+  kong_db:
+    image: postgres:9.6
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kong
+    ports:
+      - 9003:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "kong"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  kong:
+    image: kong:2.0.3-centos
+    depends_on:
+      - kong_db
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    #ports:
+    #  - 2800:8000 # Listener
+    #  - "2801:8001" # Admin API
+    #  - 2443:8443 # Listener  (SSL)
+    #  - "2444:8444" # Admin API (SSL)
+    environment:
+      KONG_DATABASE:         postgres
+      KONG_PG_HOST:          kong_db
+      KONG_PG_USER:          kong
+      KONG_PG_PASSWORD:      kong
+      KONG_PG_PORT:          5432
+      KONG_PG_DATABASE:      kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG:  /dev/stderr
+      KONG_ADMIN_ERROR_LOG:  /dev/stderr
+      KONG_PROXY_LISTEN:     0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_ADMIN_LISTEN:     0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PLUGINS:          bundled
+      KONG_LOG_LEVEL:        debug
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        # Routers
+        - "traefik.http.routers.kong_gateway_http_router.entrypoints=http"
+        - "traefik.http.routers.kong_gateway_http_router.middlewares=httpsRedirectScheme"
+        - "traefik.http.routers.kong_gateway_http_router.rule=Host(`api.tn20.wedesign.vn`)"
+        - "traefik.http.routers.kong_gateway_http_router.service=kong_gateway_service"
+        - "traefik.http.routers.kong_gateway_https_router.entrypoints=https"
+        - "traefik.http.routers.kong_gateway_https_router.rule=Host(`api.tn20.wedesign.vn`)"
+        - "traefik.http.routers.kong_gateway_https_router.service=registry_service"
+        - "traefik.http.routers.kong_gateway_https_router.tls.certresolver=httpChallenge"
+        - "traefik.http.routers.kong_gateway_https_router.service=kong_gateway_service"
+        - "traefik.http.services.kong_gateway_service.loadbalancer.server.port=8000"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.permanent=true"
+    networks:
+      - default
+      - public_proxy
+  kong_migrations:
+    image: kong:2.0.3-centos
+    command: "kong migrations bootstrap"
+    depends_on:
+      - kong_db
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_DATABASE: kong
+      KONG_PG_HOST: kong_db
+      KONG_PG_PASSWORD: kong
+      KONG_PG_USER: kong
+    deploy:
+      restart_policy:
+        condition: on-failure
+  kong_migrations_up:
+    image: kong:2.0.3-centos
+    command: "kong migrations up && kong migrations finish"
+    depends_on:
+      - kong_db
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_DATABASE: kong
+      KONG_PG_HOST: kong_db
+      KONG_PG_PASSWORD: kong
+      KONG_PG_USER: kong
+    deploy:
+      restart_policy:
+        condition: on-failure
+  konga_prepare:
+    image: pantsel/konga:next
+    command: "-c prepare -a postgres -u postgresql://kong:kong@kong_db:5432/konga_db"
+    depends_on:
+      - kong_db
+    deploy:
+      restart_policy:
+        condition: on-failure
+  konga:
+    image: pantsel/konga:next
+    environment:
+      DB_ADAPTER: postgres
+      DB_HOST: kong_db
+      DB_USER: kong
+      DB_PASSWORD: kong
+      TOKEN_SECRET: km1GUr4RkcQD7DewhJPNXrCuZwcKmqjb
+      DB_DATABASE: konga_db
+      NODE_ENV: development
+    depends_on:
+      - kong_db
+    ports:
+      - 9002:1337
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        # Routers
+        - "traefik.http.routers.konga_http_router.entrypoints=http"
+        - "traefik.http.routers.konga_http_router.middlewares=httpsRedirectScheme"
+        - "traefik.http.routers.konga_http_router.rule=Host(`kong-admin.tn20.wedesign.vn`)"
+        - "traefik.http.routers.konga_http_router.service=konga_service"
+        - "traefik.http.routers.konga_https_router.entrypoints=https"
+        - "traefik.http.routers.konga_https_router.rule=Host(`kong-admin.tn20.wedesign.vn`)"
+        - "traefik.http.routers.konga_https_router.tls.certresolver=httpChallenge"
+        - "traefik.http.routers.konga_https_router.service=konga_service"
+        - "traefik.http.services.konga_service.loadbalancer.server.port=1337"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.permanent=true"
+    networks:
+      - default
+      - public_proxy
+networks:
+  public_proxy:
+     external: true
+volumes:
+   data:
+   postgres_data:
+
+      

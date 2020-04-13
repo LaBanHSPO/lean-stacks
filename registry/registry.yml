@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 9001:5000
+    secrets:
+      - registry_auth_dynamic
+    environment:
+      #REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
+      #REGISTRY_HTTP_TLS_KEY: /certs/domain.key
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_PATH: /run/secrets/registry_auth_dynamic
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        # Routers
+        - "traefik.http.routers.registry_http_router.entrypoints=http"
+        - "traefik.http.routers.registry_http_router.middlewares=httpsRedirectScheme"
+        - "traefik.http.routers.registry_http_router.rule=Host(`registry.tn20.wedesign.vn`)"
+        - "traefik.http.routers.registry_http_router.service=registry_service"
+        - "traefik.http.routers.registry_https_router.entrypoints=https"
+        - "traefik.http.routers.registry_https_router.rule=Host(`registry.tn20.wedesign.vn`)"
+        - "traefik.http.routers.registry_https_router.service=registry_service"
+        - "traefik.http.routers.registry_https_router.tls.certresolver=httpChallenge"
+        # Services
+        - "traefik.http.services.registry_service.loadbalancer.server.port=5000"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.httpsRedirectScheme.redirectscheme.permanent=true"
+    volumes:
+      - data:/var/lib/registry
+      - certs:/certs
+    networks:
+      - public_proxy
+volumes:
+  data:
+  certs:
+networks:
+  public_proxy:
+    external: true
+secrets:
+  registry_auth_dynamic:
+     external: true
+    
+ 
