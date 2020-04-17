@@ -1,0 +1,58 @@
+version: "3.7"
+
+services:
+  mongo:
+    image: mongo:4
+    volumes:
+      - mongo_data:/data/db
+    #entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--auth"]
+    networks:
+     - common_network
+  rabbitmq:
+    image: rabbitmq
+    ports:
+      - 9011:5672
+    networks:
+     - common_network
+  mysql:  
+    image: mysql:8
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    ports:
+      - 9004:3306
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:      
+      restart_policy:
+        condition: on-failure
+    networks:
+     - common_network
+  redis:
+    image: redis:5
+    command: ["sh", "-c", "exec redis-server --appendonly no --requirepass \"$REDIS_PASSWORD\""]
+    volumes:
+      - redis_data:/data
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - 9005:6379
+    networks:
+      - common_network
+
+volumes:
+  mysql_data:
+  redis_data:
+  mongo_data:
+networks:
+  common_network:
+    external: true
+ 

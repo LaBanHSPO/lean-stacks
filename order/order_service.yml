@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  server:
+    image: registry.tn20.wedesign.vn/order:latest
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      SERVER_PORT: ${SERVER_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      WORKER_HOST: ${WORKER_HOST}
+      WORKER_PORT: ${WORKER_PORT}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      TYPEORM_CONNECTION: ${TYPEORM_CONNECTION}
+      TYPEORM_HOST: ${TYPEORM_HOST}
+      TYPEORM_DATABASE: ${TYPEORM_DATABASE}
+      TYPEORM_PORT: ${TYPEORM_PORT}
+      TYPEORM_LOGGING: ${TYPEORM_LOGGING}
+      API_DOCS_URI: ${API_DOCS_URI}
+    networks:
+      - public_api
+      - common_network
+
+networks:
+  public_api:
+    external: true
+  common_network:
+    external: true

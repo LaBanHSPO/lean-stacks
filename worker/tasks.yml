@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  task01:
+    hostname: "worker_task_01"
+    image: registry.tn20.wedesign.vn/worker:latest
+    command: celery worker -A tasks --loglevel=INFO
+    depends_on:
+      - common_rabbit
+    deploy:
+      replicas: 1
+    environment:
+      WORKER_NAME: worker
+      LOG_LEVEL: INFO
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_BACKEND_URL: ""
+    networks:
+      - common_network
+  task02:
+    hostname: "worker_task_02"
+    image: registry.tn20.wedesign.vn/worker:latest
+    command: celery worker -A tasks --loglevel=INFO
+    deploy:
+      replicas: 0
+    depends_on:
+      - common_rabbit
+    environment:
+      WORKER_NAME: worker
+      LOG_LEVEL: INFO
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_BACKEND_URL: ""
+    networks:
+      - common_network
+  flower:  
+    image: mher/flower
+    command: celery flower --basic_auth=admin:${FLOWER_ADMIN_PWD},user:userpwd
+    environment:
+       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+       FLOWER_PORT: 8888
+    ports:  
+      - ${FLOWER_PORT}:8888
+    networks:
+      - common_network
+volumes:
+  celery_data:
+networks:
+  common_network:
+    external: true

@@ -1,0 +1,15 @@
+version: '3.7'
+ 
+services:
+   web:
+    image: registry.tn20.wedesign.vn/web_portal:latest
+    environment:
+      NODE_ENV: production
+      REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL}
+      REACT_APP_GRAPH_ENDPOINT: ${REACT_APP_GRAPH_ENDPOINT}
+      REACT_APP_GRAPH_WS_ENDPOINT: ${REACT_APP_GRAPH_WS_ENDPOINT}
+    networks:
+      - public_proxy
+networks:
+  public_proxy:
+    external: true
