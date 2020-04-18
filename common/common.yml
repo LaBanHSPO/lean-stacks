@@ -9,11 +9,19 @@ services:
     networks:
      - common_network
   rabbitmq:
-    image: rabbitmq
+    image: rabbitmq:alpine
     ports:
       - 9011:5672
+      - 9013:15672
     networks:
      - common_network
+    configs:
+     - source: rabbit_enabled_plugins
+       target: /etc/rabbitmq/enabled_plugins
+    environment:
+        TZ: Asia/Ho_Chi_Minh
+        RABBITMQ_DEFAULT_USER: rabbitmq
+        RABBITMQ_DEFAULT_PASS: rabbitmq
   mysql:  
     image: mysql:8
     command: ["--default-authentication-plugin=mysql_native_password"]
@@ -55,4 +63,10 @@ volumes:
 networks:
   common_network:
     external: true
- 
+configs:
+  rabbit_enabled_plugins:
+    external: true
+
+
+
+  
