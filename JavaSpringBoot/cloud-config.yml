@@ -1,0 +1,38 @@
+version: '3.7'
+
+services:
+   config_server:
+     image: registry.s2.wedesign.vn/config_server
+     environment:
+       SPRING_APPLICATION_JSON: '{"spring": {"cloud": {"config": {"server": {"git": {"uri": "https://github.com/LaBanHSPO/spring-config-repo", "clone-on-start": true}}}}}}'
+     ports:
+       - 9020:8888
+     entrypoint: "java -jar /opt/spring-cloud/lib/config-server.jar"
+     logging:
+       driver: json-file
+     networks:
+      - common_network
+      - public_proxy
+      - default
+   config_client:
+     image: registry.s2.wedesign.vn/config_client
+     environment:
+       SPRING_APPLICATION_JSON: '{"spring": {"cloud": {"config": {"uri": "http://ip.s1.wedesign.vn:9020"}}}}'
+     depends_on:
+       - config_server
+     entrypoint: "java -jar /opt/spring-cloud/lib/config-client.jar"
+     deploy:
+       replicas: 1
+     logging:
+       driver: json-file
+     ports:
+       - 9021:8080
+     networks:
+      - common_network
+      - public_proxy
+      - default
+networks:
+  public_proxy:
+    external: true
+  common_network:
+    external: true
