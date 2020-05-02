@@ -8,6 +8,12 @@ services:
     #entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--auth"]
     networks:
      - common_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo --port 7011 --username admin --password /run/secrets/mongo_root_pass --authenticationDatabase admin --quiet 1
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
   rabbitmq:
     image: rabbitmq:alpine
     ports:
